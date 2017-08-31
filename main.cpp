@@ -204,7 +204,7 @@ class cTextWindow
 	void MoveCursorRight()
 	{
 		cursorPos.x++;
-		if(cursorPos.x >= width)
+		if(cursorPos.x >= (int)width)
 		{
 			//cursorPos
 		}
@@ -220,6 +220,7 @@ class cTextWindow
 	//void MoveSelectStartRight();
 	//void MoveSelectStartWordLeft();
 	//void MoveSelectStartWordRight();
+	//int GetLongestLine();
 	void Show()
 	{
 		wbkgd(border, COLOR_PAIR(1));
