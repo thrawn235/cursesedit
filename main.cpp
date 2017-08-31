@@ -44,6 +44,10 @@ class cTextWindow
 	vec2D selectStart;
 	string filePath;
 	int tabSpaces;
+	short mode;
+	#define MODE_WORD_WRAP 0
+	#define MODE_LINE_SCROLLING 1
+	#define MODE_2D_SCROLLING 2
 	
 	public:
 	cTextWindow()
@@ -60,6 +64,10 @@ class cTextWindow
 		selectStart.y = 0;
 		selectStart.x = 0;
 		tabSpaces = 4;
+		mode = MODE_2D_SCROLLING;
+		wmove(win, 0,0);
+		cursorPos.y = 0;
+		cursorPos.x = 0;
 	}
 	cTextWindow(int newPosY, int newPosX, int newWidth, int newHeight)
 	{
@@ -75,6 +83,10 @@ class cTextWindow
 		selectStart.y = 0;
 		selectStart.x = 0;
 		tabSpaces = 4;
+		mode = MODE_2D_SCROLLING;
+		wmove(win, 0,0);
+		cursorPos.y = 0;
+		cursorPos.x = 0;
 	}
 	void LoadFromFile(string path) //loads all lines from file and strips \n (no error checking)
 	{
@@ -113,6 +125,7 @@ class cTextWindow
 		{
 			textBuffer.push_back("this file does not exits");
 		}
+		wmove(win, 0,0);
 	}
 	void SaveToFile(string path) //Save File, Add \n, replace Spaces with Tabs
 	{
@@ -172,8 +185,30 @@ class cTextWindow
 		
 		file.close();
 	}
-	//void MoveCursorLeft();
-	//void MoveCursorRight()
+	void MoveCursorLeft()
+	{
+		cursorPos.x--;
+		if(cursorPos.x <= 0)
+		{
+			//cursorPos.x = 0;
+			if(origin.x > 0)
+			{
+				origin.x =- 5;
+				if(origin.x < 0)
+				{
+					origin.x = 0;
+				}
+			}
+		}
+	}
+	void MoveCursorRight()
+	{
+		cursorPos.x++;
+		if(cursorPos.x >= width)
+		{
+			//cursorPos
+		}
+	}
 	//void MoveCursorUp();
 	//void MoveCursorDown();
 	//void MoveCursorWordLeft();
@@ -196,7 +231,7 @@ class cTextWindow
 		for(unsigned int i = origin.y; i < (unsigned int)getmaxy(win)+origin.y && i < textBuffer.size(); i++) //or EOF
 		{
 			line = textBuffer[i];
-			wprintw(win,"%i: %s\n", i, line.c_str());
+			wprintw(win,"%4i: %s\n", i, line.c_str());
 		}
 		
 		wmove(win, cursorPos.y, cursorPos.x);
@@ -213,13 +248,23 @@ int main()
 	cTextWindow textWindow;
 	textWindow.LoadFromFile("./main.cpp");
 	
-	int ch = 0;
+	unsigned int ch = 0;
 	while(ch != 27)
 	{
-		textWindow.Show();
+		
 		
 		ch = getch();
-			
+		
+		if(ch == KEY_LEFT)
+		{
+			textWindow.MoveCursorLeft();
+		}
+		else if(ch == KEY_RIGHT)
+		{
+			textWindow.MoveCursorRight();
+		}
+		
+		textWindow.Show();
 		
 /*		if(ch == KEY_UP)
 		{
