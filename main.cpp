@@ -34,6 +34,7 @@ class cTextWindow
 	vector<string> textBuffer;
 	WINDOW* win;
 	WINDOW* border;
+	WINDOW* numberArea;
 	vec2D pos;
 	vec2D cursorPos;
 	vec2D windowPos;
@@ -57,7 +58,8 @@ class cTextWindow
 		width = 60;
 		height = 15;
 		win = newwin(height, width, pos.y, pos.x);
-		border = newwin(height+2, width+2, pos.y-1, pos.x-1);
+		border = newwin(height+2, width+10, pos.y-1, pos.x-9);
+		numberArea = newwin(height, 7, pos.y, pos.x-8);
 		origin.y =0;
 		origin.x =0;
 		selectMode = false;
@@ -76,7 +78,8 @@ class cTextWindow
 		width = newWidth;
 		height = newHeight;
 		win = newwin(height, width, pos.y, pos.x);
-		border = newwin(height+2, width+2, pos.y-1, pos.x-1);
+		border = newwin(height+2, width+10, pos.y-1, pos.x-9);
+		numberArea = newwin(height, 7, pos.y, pos.x-8);
 		origin.y =0;
 		origin.x =0;
 		selectMode = false;
@@ -190,27 +193,34 @@ class cTextWindow
 		cursorPos.x--;
 		if(cursorPos.x <= 0)
 		{
-			//cursorPos.x = 0;
-			if(origin.x > 0)
-			{
-				origin.x =- 5;
-				if(origin.x < 0)
-				{
-					origin.x = 0;
-				}
-			}
+			cursorPos.x = 0;
 		}
 	}
 	void MoveCursorRight()
 	{
 		cursorPos.x++;
-		if(cursorPos.x >= (int)width)
+		int longest = GetLongestLine();
+		if(cursorPos.x > longest)
 		{
-			//cursorPos
+			cursorPos.x = longest;
 		}
 	}
-	//void MoveCursorUp();
-	//void MoveCursorDown();
+	void MoveCursorUp()
+	{
+		cursorPos.y--;
+		if(cursorPos.y < 0)
+		{
+			cursorPos.y = 0;
+		}
+	}
+	void MoveCursorDown()
+	{
+		cursorPos.y++;
+		if(cursorPos.y > textBuffer.size())
+		{
+			cursorPos.y = textBuffer.size();
+		}
+	}
 	//void MoveCursorWordLeft();
 	//void MoveCursorWordRight();
 	//void CarriageReturn();
@@ -220,23 +230,68 @@ class cTextWindow
 	//void MoveSelectStartRight();
 	//void MoveSelectStartWordLeft();
 	//void MoveSelectStartWordRight();
-	//int GetLongestLine();
+	int GetLongestLine()
+	{
+		unsigned int length = 0;
+		for(unsigned int i = 0; i < textBuffer.size(); i++)
+		{
+			if(textBuffer[i].length() > length)
+			{
+				length = textBuffer[i].length();
+			}
+		}
+		return length;
+	}
 	void Show()
 	{
 		wbkgd(border, COLOR_PAIR(1));
 		wbkgd(win, COLOR_PAIR(1));
+		wbkgd(numberArea, COLOR_PAIR(2));
 		box(border, 0,0);
+		
+		//set Origin according to Cursorpos
+		if(cursorPos.x < origin.x )
+		{
+				origin.x = cursorPos.x -5;
+				if(origin.x < 0)
+				{
+					origin.x = 0;
+				}
+		}
+		if(cursorPos.x >= origin.x + width)
+		{
+			origin.x = cursorPos.x -width +5;
+			if(origin.x > GetLongestLine() - width)
+			{
+				origin.x = GetLongestLine() - width;
+			}
+		}
+		if(cursorPos.y < origin.y)
+		{
+			origin.y = cursorPos.y;
+		}
+		if(cursorPos.y >= origin.y + height)
+		{
+			origin.y = cursorPos.y - height;
+		}
 		
 		wmove(win, 0,0);
 		string line;
 		for(unsigned int i = origin.y; i < (unsigned int)getmaxy(win)+origin.y && i < textBuffer.size(); i++) //or EOF
 		{
 			line = textBuffer[i];
-			wprintw(win,"%4i: %s\n", i, line.c_str());
+			line.erase(0, origin.x);
+			if(line.length() >= width)
+			{
+				line.erase(width, line.length() - width);
+			}
+			wprintw(numberArea, "%4i: \n", i);
+			wprintw(win,"%s\n", line.c_str());
 		}
 		
-		wmove(win, cursorPos.y, cursorPos.x);
+		wmove(win, cursorPos.y - origin.y, cursorPos.x - origin.x);
 		wrefresh(border);
+		wrefresh(numberArea);
 		wrefresh(win);
 	}
 };
@@ -264,46 +319,17 @@ int main()
 		{
 			textWindow.MoveCursorRight();
 		}
-		
-		textWindow.Show();
-		
-/*		if(ch == KEY_UP)
+		else if(ch == KEY_UP)
 		{
-			if(cursorPosY <= 0)
-			{
-				textWindow.SetOriginY(textWindow.GetOriginY()-1);
-			}
-			else
-			{
-				cursorPosY--;
-			}
+			textWindow.MoveCursorUp();
 		}
 		else if(ch == KEY_DOWN)
 		{
-			if(cursorPosY >= textWindow.GetHeight()-1)
-			{
-				textWindow.SetOriginY(textWindow.GetOriginY()+1);
-			}
-			else
-			{
-				cursorPosY++;
-			}
+			textWindow.MoveCursorDown();
 		}
-		else if(ch == KEY_LEFT)
-		{
-			cursorPosX--;
-		}
-		else if(ch == KEY_RIGHT)
-		{
-			cursorPosX++;
-		}
-		textWindow.Show();
 		
-		wmove(textWindow.GetWin(), cursorPosY, cursorPosX);
-		wrefresh(textWindow.GetWin());*/
-		
-
-	}	
+		textWindow.Show();	
+	}
 	
 	//getch();
 	endwin();
