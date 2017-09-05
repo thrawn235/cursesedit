@@ -98,7 +98,7 @@ class cTextWindow
 		if(file)
 		{
 			textBuffer.clear();
-			path = filePath;
+			filePath = path;
 		
 			string line;
 			
@@ -216,13 +216,41 @@ class cTextWindow
 	void MoveCursorDown()
 	{
 		cursorPos.y++;
-		if(cursorPos.y > textBuffer.size())
+		if((unsigned int)cursorPos.y > textBuffer.size())
 		{
 			cursorPos.y = textBuffer.size();
 		}
 	}
-	//void MoveCursorWordLeft();
+	void MoveCursorWordLeft()
+	{
+		char testChar = 0;
+		while(testChar != ' ' && !CursorOutOfRange())
+		{
+			if(cursorPos.x <= 0)
+			{
+				cursorPos.y --;
+				cursorPos.x = textBuffer[cursorPos.y].length();
+			}
+			testChar = textBuffer[cursorPos.y][cursorPos.x];
+			cursorPos.x--;
+		}
+	}
 	//void MoveCursorWordRight();
+	bool CursorOutOfRange()
+	{
+		if(cursorPos.x < 0 && cursorPos.y < 0)
+		{
+			return true;
+		}
+		if((unsigned int)cursorPos.y > textBuffer.size())
+		{
+			if((unsigned int)cursorPos.x > textBuffer[textBuffer.size()].length())
+			{
+				return true;
+			}
+		}
+		return false;
+	}	
 	//void CarriageReturn();
 	//void EnableSelect();
 	//void DisableSelect();
@@ -230,6 +258,98 @@ class cTextWindow
 	//void MoveSelectStartRight();
 	//void MoveSelectStartWordLeft();
 	//void MoveSelectStartWordRight();
+	void MoveCursorToEndLine()
+	{
+		cursorPos.x = (int)textBuffer[cursorPos.y].length();
+	}
+	void MoveCursorToStartLine()
+	{
+		cursorPos.x = 0;
+	}
+	void MoveCursorPos1()
+	{
+		cursorPos.x = 0;
+		cursorPos.y = 0;
+	}
+	void MoveCursorEnd()
+	{
+		cursorPos.y = textBuffer.size();
+		MoveCursorToEndLine();
+	}
+	//void MoveCursorPageUp();
+	//void MoveCursorPageDown();
+	bool IsCursorLeftOfLine()
+	{
+		if(cursorPos.x < 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	bool IsCursorRightOfLine()
+	{
+		if((unsigned int)cursorPos.x > textBuffer[cursorPos.y].length())
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	void InsertCharacter(char newCharacter)
+	{
+		if(!CursorOutOfRange())
+		{
+			if(!(cursorPos.x < 0))
+			{
+				if((unsigned int)cursorPos.x <= textBuffer[cursorPos.y].size())
+				{
+					textBuffer[cursorPos.y].insert(cursorPos.x, &newCharacter);
+				}
+				else //outsinde of string; to the right
+				{
+					//generate spaces string
+					string appendLine;
+					for(unsigned int i = 0; i < cursorPos.x - textBuffer[cursorPos.y].length(); i++)
+					{
+						appendLine.append(" ");
+					}
+					//append newCharacter to string
+					appendLine.append(&newCharacter);
+					//append string
+					textBuffer[cursorPos.y].append(appendLine);
+				}
+				cursorPos.x++;
+			}
+		}
+	}
+	//void DeleteSelection();
+	//void DeleteCharacter(int line, int row);
+	void DeleteCharacterAtCursor()
+	{
+		if(!CursorOutOfRange() && (unsigned int)cursorPos.x <= textBuffer[cursorPos.y].length())
+		{
+			textBuffer[cursorPos.y].erase(cursorPos.x,1);
+		}
+	}
+	void DeleteCharacterLeftOfCursor()
+	{
+		if(!CursorOutOfRange() && cursorPos.x > 0 && !IsCursorRightOfLine())
+		{
+			textBuffer[cursorPos.y].erase(cursorPos.x-1,1);
+		}
+		MoveCursorLeft();
+		if(textBuffer[cursorPos.y].length() <= 0 && cursorPos.y >= 1)
+		{
+			textBuffer.erase(textBuffer.begin()+cursorPos.y);
+			MoveCursorUp();
+			MoveCursorToEndLine();
+		}
+	}
 	int GetLongestLine()
 	{
 		unsigned int length = 0;
@@ -249,6 +369,10 @@ class cTextWindow
 		wbkgd(numberArea, COLOR_PAIR(2));
 		box(border, 0,0);
 		
+		//write Document Name
+		wmove(border, 0, (getmaxx(border)/2) - (filePath.length()/2) -2);
+		wprintw(border, " %s ", filePath.c_str());
+		
 		//set Origin according to Cursorpos
 		if(cursorPos.x < origin.x )
 		{
@@ -258,10 +382,10 @@ class cTextWindow
 					origin.x = 0;
 				}
 		}
-		if(cursorPos.x >= origin.x + width)
+		if(cursorPos.x >= origin.x + (int)width)
 		{
 			origin.x = cursorPos.x -width +5;
-			if(origin.x > GetLongestLine() - width)
+			if(origin.x > GetLongestLine() - (int)width)
 			{
 				origin.x = GetLongestLine() - width;
 			}
@@ -270,7 +394,7 @@ class cTextWindow
 		{
 			origin.y = cursorPos.y;
 		}
-		if(cursorPos.y >= origin.y + height)
+		if(cursorPos.y >= origin.y + (int)height)
 		{
 			origin.y = cursorPos.y - height;
 		}
@@ -326,6 +450,34 @@ int main()
 		else if(ch == KEY_DOWN)
 		{
 			textWindow.MoveCursorDown();
+		}
+		else if(ch == 'w')
+		{
+			textWindow.MoveCursorWordLeft();
+		}
+		else if(ch == KEY_BACKSPACE)
+		{
+			textWindow.DeleteCharacterLeftOfCursor();
+		}
+		else if(ch == KEY_DC)
+		{
+			textWindow.DeleteCharacterAtCursor();
+		}
+		else if(ch == KEY_HOME)
+		{
+			textWindow.MoveCursorToStartLine();
+		}
+		else if(ch == KEY_END)
+		{
+			textWindow.MoveCursorToEndLine();
+		}
+		else if(ch == KEY_EOS)
+		{
+			textWindow.MoveCursorEnd();
+		}
+		else
+		{
+			textWindow.InsertCharacter(ch);
 		}
 		
 		textWindow.Show();	
