@@ -28,6 +28,15 @@ struct vec2D
 	int y;
 };
 
+bool IsCharacterFromAlphabet(char character)
+{
+	if((character >= 65 && character <=90) || (character >= 97 && character <= 122) || (character >= 48 && character <= 57) || (character >= 128 && character <= 167) || character == 239) 
+	{
+		return true;
+	}
+	return false;
+}
+
 class cTextWindow
 {
 	public: //change to protected when done debugging!
@@ -221,7 +230,7 @@ class cTextWindow
 			cursorPos.y = textBuffer.size();
 		}
 	}
-	void MoveCursorWordLeft()
+	void MoveCursorWordLeft() //use curser right  logic eventually
 	{
 		char testChar = 0;
 		while(testChar != ' ' && !CursorOutOfRange())
@@ -235,7 +244,18 @@ class cTextWindow
 			cursorPos.x--;
 		}
 	}
-	//void MoveCursorWordRight();
+	void MoveCursorWordRight()
+	{
+		do
+		{
+			cursorPos.x++;
+			if(IsCursorRightOfLine())
+			{
+				MoveCursorDown();
+				MoveCursorToStartLine();
+			}
+		}while(!(!IsCharacterFromAlphabet(textBuffer[cursorPos.y][cursorPos.x-1]) && IsCharacterFromAlphabet(textBuffer[cursorPos.y][cursorPos.x])) && cursorPos.x < (int)textBuffer[cursorPos.y].length());
+	}
 	bool CursorOutOfRange()
 	{
 		if(cursorPos.x < 0 && cursorPos.y < 0)
@@ -251,7 +271,14 @@ class cTextWindow
 		}
 		return false;
 	}	
-	//void CarriageReturn();
+	void CarriageReturn()
+	{
+		string newline = &textBuffer[cursorPos.y][cursorPos.x];
+		textBuffer.insert(textBuffer.begin()+cursorPos.y+1, 1, newline);
+		textBuffer[cursorPos.y].erase(cursorPos.x, textBuffer[cursorPos.y].length() - cursorPos.x);
+		MoveCursorDown();
+		MoveCursorToStartLine();
+	}
 	//void EnableSelect();
 	//void DisableSelect();
 	//void MoveSelectStartLeft();
@@ -276,8 +303,27 @@ class cTextWindow
 		cursorPos.y = textBuffer.size();
 		MoveCursorToEndLine();
 	}
-	//void MoveCursorPageUp();
-	//void MoveCursorPageDown();
+	void MoveCursorPageUp()
+	{
+		cursorPos.y = cursorPos.y - height;
+		cursorPos.y++;
+		if(cursorPos.y < 0)
+		{
+			cursorPos.y = 0;
+		}
+	}
+	void MoveCursorPageDown()
+	{
+		cursorPos.y = cursorPos.y + height;
+		cursorPos.y--;
+		if(cursorPos.y > (int)textBuffer.size())
+		{
+			if(IsCursorRightOfLine())
+			{
+				MoveCursorToEndLine();
+			}
+		}
+	}
 	bool IsCursorLeftOfLine()
 	{
 		if(cursorPos.x < 0)
@@ -342,13 +388,16 @@ class cTextWindow
 		{
 			textBuffer[cursorPos.y].erase(cursorPos.x-1,1);
 		}
-		MoveCursorLeft();
-		if(textBuffer[cursorPos.y].length() <= 0 && cursorPos.y >= 1)
+		
+		if(cursorPos.x == 0 && cursorPos.y >= 1)
 		{
-			textBuffer.erase(textBuffer.begin()+cursorPos.y);
 			MoveCursorUp();
 			MoveCursorToEndLine();
+			textBuffer[cursorPos.y].append(textBuffer[cursorPos.y+1]);
+			textBuffer.erase(textBuffer.begin()+cursorPos.y+1);
+			MoveCursorRight();
 		}
+		MoveCursorLeft();
 	}
 	int GetLongestLine()
 	{
@@ -451,9 +500,13 @@ int main()
 		{
 			textWindow.MoveCursorDown();
 		}
-		else if(ch == 'w')
+		else if(ch == 'a')
 		{
 			textWindow.MoveCursorWordLeft();
+		}
+		else if(ch == 'd')
+		{
+			textWindow.MoveCursorWordRight();
 		}
 		else if(ch == KEY_BACKSPACE)
 		{
@@ -474,6 +527,10 @@ int main()
 		else if(ch == KEY_EOS)
 		{
 			textWindow.MoveCursorEnd();
+		}
+		else if(ch == 10)
+		{
+			textWindow.CarriageReturn();
 		}
 		else
 		{
